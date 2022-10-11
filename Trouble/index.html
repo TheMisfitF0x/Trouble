@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .gameBoard {
+            width: 500px;
+            height: 500px;
+            x: 50px;
+            y: 50px;
+            fill: grey;
+        }
+
+        .popper {
+            r: 50px;
+            cx: 300px;
+            cy: 300px;
+            fill: white;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Player Count Selector (WIP) -->
+    <select id="PlayerCountInput">
+        <option value=2>2 Players</option>
+        <option value=3>3 Players</option>
+        <option value=4>4 Players</option>
+    </select>
+    <button id="PlayerCountButton" onclick="CreateGame()">Start game.</button>
+
+    <svg id="gameZone" width="600" height="600">
+
+    </svg>
+
+
+    <!-- Scripts to include -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.5.1/gsap.min.js"></script>
+    <script src="js/app.js" type="module"></script>
+</body>
+
+</html>
