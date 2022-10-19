@@ -26,6 +26,15 @@
             fill: white;
             stroke-width: 5px;
         }
+
+        .selectedspace {
+            fill: #F9E076;
+        }
+
+        .piece {
+            r: 10px;
+            fill: lightgrey;
+        }
     </style>
 </head>
 
@@ -39,8 +48,9 @@
     <button id="PlayerCountButton" onclick="CreateGame()">Start game</button>
 
     <svg id="gameZone" width="600" height="600">
-
     </svg>
+    <p id="message">Whoops</p>
+
 
 
     <!-- Scripts to include -->

@@ -1,6 +1,7 @@
 class PlayerPiece {
-    constructor(team) {
+    constructor(team, element) {
         this.team = team;
+        this.element = element;
 
         //Move this piece into the player's home based on team. It has no "space" until left start
         this.space = null;
@@ -18,12 +19,12 @@ class PlayerPiece {
 
     LeaveStart() {
         //Check the start space, if clear move this onto that space and return true. Else return false.
-        //Called by MoveXSpaces()
+        //Called by MoveToSpace
     }
 
     GoToStart() {
         //Go back to start if bumped by another piece from a different team. 
-        //Called by MoveXSpaces()
+        //Called by MoveToSpace
     }
 }
 
@@ -38,9 +39,8 @@ class Space {
 }
 
 class Board {
-
     gameZone = document.getElementById("gameZone");
-    moveIndicator = document.getElementById("MoveAmountIndicator");
+    popperText = document.getElementById("message");
     colors = ["#c30000", "#1200b3", "#fccb00", "#008b02"];
 
     constructor(playerCount) {
@@ -52,8 +52,10 @@ class Board {
 
         let popper = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         popper.classList.add("popper");
+        popper.addEventListener("click", (event) => { this.Pop() })
         this.gameZone.appendChild(popper);
 
+        //Create locations... lots' of locations.
         let spaceLocations = [
             [
                 { x: 500, y: 300 },
@@ -113,6 +115,7 @@ class Board {
         //Create Space References
         this.spaces = [];
         for (var teams = 0; teams < 4; teams++) {
+            this.spaces[teams] = [];
             for (var positions = 0; positions < 11; positions++) {
                 let newSpaceEl = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                 newSpaceEl.classList.add("space");
@@ -121,22 +124,34 @@ class Board {
 
                 this.gameZone.appendChild(newSpaceEl);
                 newSpaceEl.style.stroke = this.colors[teams];
-                this.spaces += new Space(teams, positions, newSpaceEl);
+                this.spaces[teams][positions] = new Space(teams, positions, newSpaceEl);
             }
         }
 
-        console.log(this.spaces[0].element);
+
 
         //Create pieces
         this.pieces = [];
+        var offset = 0;
         for (var createdTeams = 0; createdTeams < playerCount; createdTeams++) {
+            this.pieces[createdTeams] = [];
             for (var createdPieces = 0; createdPieces < 4; createdPieces++) {
-                this.pieces += new PlayerPiece(createdTeams);
+                let newPieceEl = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                newPieceEl.classList.add("piece")
+                var newX = (25 * offset) + 10;
+                var newY = 580;
+                newPieceEl.setAttribute("cx", newX);
+                newPieceEl.setAttribute("cy", newY);
+                newPieceEl.style.fill = this.colors[createdTeams];
+                this.gameZone.appendChild(newPieceEl);
+                this.pieces[createdTeams][createdPieces] = new PlayerPiece(createdTeams);
+
+                offset++;
             }
         }
 
-        //Get the first move amt.
-        this.currentMoveAmt = this.Pop();
+        this.hasPopped = false;
+        this.hasPlayed = false;
 
         //Set the max players
         this.playerAmt = Number(playerCount);
@@ -144,27 +159,65 @@ class Board {
 
         //Set the active player
         this.currentPlayer = 0;
+
+        this.popperText.innerText = "Player " + (this.currentPlayer + 1) + "'s turn. Press the popper!";
     }
 
-    ValidateLandingSpace(piece, currentSpace, spacesToMove) {
+    FindLandingSpaces(spacesToMove) {
+        //First, check the pieces to see if any can move out of start. If so, mark the current players start square as an option.
+        let validMoveFound = true;
+        if (spacesToMove == 6) {
+            for (var piece = 0; piece < this.pieces[this.currentPlayer].length; pieces++) {
+                if (this.pieces[this.currentPlayer][piece].inStart == true) {
+                    this.spaces[this.currentPlayer][8].classList.add("selectedspace");
+                    //Create listener for this space.
+                    validMoveFound == true;
+                    break;
+                }
+            }
+        }
+
+        //Next, check all the player's pieces (out of start) to ensure they have a place they can land.
+        for (var piece = 0; piece < this.pieces[this.currentPlayer].length; pieces++) {
+            if (this.pieces[this.currentPlayer][piece].inStart == false) {
+                var startSpace = this.pieces[this.currentPlayer][piece].space;
+                for (var validSpaces = 1; validSpaces < spacesToMove; validSpaces++) {
+                    let validSpaceFound = false;
+                    while (validSpaceFound = false) {
+
+                    }
+                }
+            }
+        }
+
         //Checks the space spacesToMove away from the provided one, returns true if it is a valid place to land and false if not.
         //Uses team from provided piece to determine if finish line and other pieces are valid landing spots.
     }
 
-    //Generates a new move amt and updates the popper in the middle of the board.
+    //Generates a new move amt and updates the popper in the middle of the board. Only do this if the current player has moved.
     Pop() {
-        let newVal = Math.round(Math.random() * 6);
-        //Update the popper in the middle with new value
-        return newVal;
+        if (this.hasPopped == false) {
+            let newVal = 0;
+
+            do {//Generate random numberes till I get one that isn't zero.
+                newVal = Math.round(Math.random() * 6);
+            } while (newVal == 0)
+
+            this.currentMoveAmt = newVal;
+            this.hasPopped = true;
+            this.popperText.innerText = "Player " + (this.currentPlayer + 1) + "'s turn. Move: " + this.currentMoveAmt;
+            this.FindLandingSpaces(newVal);
+        }
     }
 
-    //Sets the new currentPlayer to the next player in line and generates a new move amt for them.
+    //Sets the new currentPlayer to the next player in line and prompt to pop
     NextTurn() {
         this.currentPlayer++;
         if (this.currentPlayer == this.playerAmt) {
             this.currentPlayer = 0;
         }
-        this.currentMoveAmt = this.Pop();
+        this.hasPopped = false;
+        this.popperText.innerText = "Player " + (this.currentPlayer + 1) + "'s turn. Press the popper!";
     }
 }
 
