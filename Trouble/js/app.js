@@ -1,31 +1,50 @@
 class PlayerPiece {
-    constructor(team, element) {
+    constructor(team, element, board) {
         this.team = team;
         this.element = element;
+        this.board = board;
 
-        //Move this piece into the player's home based on team. It has no "space" until left start
         this.space = null;
+        this.destination = null;
 
         //Starts in Start
         this.inStart = true;
         this.inFinish = false;
     }
 
-    MoveToSpace(x) {
-        //Check if x == 6 and inStart. If so run leaveStart and return it's value.
-        //Use x to determine how many spaces to move, and use the board's nextSpace function to figure out how many spaces actually count. 
-        //Then, check the destination to see if it's a valid landing space. If so, move and return true. If not, return false.
+    MoveToSpace() {
+        console.log(this);
+        //Set space to destination, set my element position to equal destination's position
+
+        if (this.board.hasPlayed == false) {
+            if (this.space != null) {
+                this.space.isOccupied = false;
+            }
+            this.space = this.destination;
+            this.destination.isOccupied = true;
+            this.element.setAttribute("cx", this.destination.element.dataset.x);
+            this.element.setAttribute("cy", this.destination.element.dataset.y);
+            this.board.hasPlayed = true;
+            if (this.destination.position > 3 && this.destination.position < 8) {
+                this.inFinish == true;
+            }
+            this.board.NextTurn();
+            console.log("Moved");
+            if (this.inStart == true) {
+                this.inStart = false;
+            }
+        }
+
     }
 
-    LeaveStart() {
-        //Check the start space, if clear move this onto that space and return true. Else return false.
-        //Called by MoveToSpace
+    AddListener() {
+        this.element.addEventListener("click", (event) => { this.MoveToSpace() });
     }
 
-    GoToStart() {
-        //Go back to start if bumped by another piece from a different team. 
-        //Called by MoveToSpace
+    RemoveListener() {
+        this.element.removeEventListener("click", (event) => { this.MoveToSpace() });
     }
+
 }
 
 class Space {
@@ -121,6 +140,8 @@ class Board {
                 newSpaceEl.classList.add("space");
                 newSpaceEl.setAttribute("cx", spaceLocations[teams][positions].x);
                 newSpaceEl.setAttribute("cy", spaceLocations[teams][positions].y);
+                newSpaceEl.dataset.x = spaceLocations[teams][positions].x;
+                newSpaceEl.dataset.y = spaceLocations[teams][positions].y;
 
                 this.gameZone.appendChild(newSpaceEl);
                 newSpaceEl.style.stroke = this.colors[teams];
@@ -144,14 +165,14 @@ class Board {
                 newPieceEl.setAttribute("cy", newY);
                 newPieceEl.style.fill = this.colors[createdTeams];
                 this.gameZone.appendChild(newPieceEl);
-                this.pieces[createdTeams][createdPieces] = new PlayerPiece(createdTeams);
-
+                this.pieces[createdTeams][createdPieces] = new PlayerPiece(createdTeams, newPieceEl, this);
+                this.pieces[createdTeams][createdPieces].destination = this.spaces[createdTeams][8];
                 offset++;
             }
         }
 
         this.hasPopped = false;
-        this.hasPlayed = false;
+        this.hasPlayed = true;
 
         //Set the max players
         this.playerAmt = Number(playerCount);
@@ -160,43 +181,82 @@ class Board {
         //Set the active player
         this.currentPlayer = 0;
 
+        //Create Local Listeners
+        for (var x = 0; x < this.pieces[this.currentPlayer].length; x++) {
+            this.pieces[this.currentPlayer][x].AddListener();
+        }
+
         this.popperText.innerText = "Player " + (this.currentPlayer + 1) + "'s turn. Press the popper!";
     }
 
     FindLandingSpaces(spacesToMove) {
         //First, check the pieces to see if any can move out of start. If so, mark the current players start square as an option.
-        let validMoveFound = true;
+        let validMoveFound = false;
         if (spacesToMove == 6) {
-            for (var piece = 0; piece < this.pieces[this.currentPlayer].length; pieces++) {
-                if (this.pieces[this.currentPlayer][piece].inStart == true) {
-                    this.spaces[this.currentPlayer][8].classList.add("selectedspace");
-                    //Create listener for this space.
-                    validMoveFound == true;
+            for (var piece = 0; piece < this.pieces[this.currentPlayer].length; piece++) {
+                if (this.pieces[this.currentPlayer][piece].inStart == true && this.spaces[this.currentPlayer][8].isOccupied == false) {
+                    this.spaces[this.currentPlayer][8].element.classList.add("selectedspace");
+                    //this.spaces[this.currentPlayer][8].element.addEventListener("click", piece.MoveToSpace); //piece.MoveToSpace(this.spaces[this.currentPlayer][8]))
+                    validMoveFound = true;
+                    console.log("Start is an option")
                     break;
                 }
             }
         }
 
         //Next, check all the player's pieces (out of start) to ensure they have a place they can land.
-        for (var piece = 0; piece < this.pieces[this.currentPlayer].length; pieces++) {
-            if (this.pieces[this.currentPlayer][piece].inStart == false) {
+        for (var piece = 0; piece < this.pieces[this.currentPlayer].length; piece++) {
+            if (this.pieces[this.currentPlayer][piece].inStart == false && this.pieces[this.currentPlayer][piece].inFinish == false) {
+                console.log("Piece " + piece + " is out of start")
                 var startSpace = this.pieces[this.currentPlayer][piece].space;
-                for (var validSpaces = 1; validSpaces < spacesToMove; validSpaces++) {
-                    let validSpaceFound = false;
-                    while (validSpaceFound = false) {
-
+                var validSpacesFound = 0;
+                var spaceOffset = 1;
+                var teamOffset = 0;
+                while (validSpacesFound < spacesToMove) {
+                    if (startSpace.position + spaceOffset >= 11)//Check if the next space is in the next section of the board
+                    {
+                        console.log("Next Team Area");
+                        spaceOffset -= 11;
+                        teamOffset++;
                     }
+
+                    if (startSpace.team + teamOffset == 4) {
+                        console.log("SetBackTeams");
+                        teamOffset -= 4;
+                    }
+
+                    //Check if the evaluated space is a finish space. if the team's good, do nothing. If not, add 4 to the offset to skip all finish spaces, then continue.
+                    if (startSpace.position + spaceOffset == 4) {
+                        if (startSpace.team + teamOffset != this.currentPlayer) {
+                            spaceOffset += 4;
+                            console.log("Skipping foreign finish");
+                            continue;
+                        }
+                    }
+
+                    validSpacesFound++;
+                    //Check if this is the final spot (spaceToMove - 1). If it is, check if it's occupied. If so, do nothing. If not, set a listener and set valid spot found to true
+                    if (validSpacesFound == spacesToMove && this.spaces[startSpace.team + teamOffset][startSpace.position + spaceOffset].isOccupied == false) {
+                        validMoveFound = true;
+                        this.pieces[this.currentPlayer][piece].destination = this.spaces[startSpace.team + teamOffset][startSpace.position + spaceOffset];
+                        this.spaces[startSpace.team + teamOffset][startSpace.position + spaceOffset].element.classList.add("selectedspace");
+                    }
+
+                    spaceOffset++;
                 }
             }
         }
 
-        //Checks the space spacesToMove away from the provided one, returns true if it is a valid place to land and false if not.
-        //Uses team from provided piece to determine if finish line and other pieces are valid landing spots.
+        if (validMoveFound == false) {
+            this.hasPlayed = true;
+            this.NextTurn();
+            console.log("Skipping");
+        }
     }
 
     //Generates a new move amt and updates the popper in the middle of the board. Only do this if the current player has moved.
     Pop() {
-        if (this.hasPopped == false) {
+        if (this.hasPopped == false && this.hasPlayed == true) {
             let newVal = 0;
 
             do {//Generate random numberes till I get one that isn't zero.
@@ -205,16 +265,29 @@ class Board {
 
             this.currentMoveAmt = newVal;
             this.hasPopped = true;
+            this.hasPlayed = false;
             this.popperText.innerText = "Player " + (this.currentPlayer + 1) + "'s turn. Move: " + this.currentMoveAmt;
+            console.log("Move Rolled: " + newVal);
             this.FindLandingSpaces(newVal);
         }
     }
 
     //Sets the new currentPlayer to the next player in line and prompt to pop
     NextTurn() {
+        for (var x = 0; x < this.spaces.length; x++) {
+            for (var y = 0; y < this.spaces[x].length; y++) {
+                this.spaces[x][y].element.classList.remove("selectedspace");
+            }
+        }
+        for (var x = 0; x < this.pieces[this.currentPlayer].length; x++) {
+            this.pieces[this.currentPlayer][x].RemoveListener();
+        }
         this.currentPlayer++;
         if (this.currentPlayer == this.playerAmt) {
             this.currentPlayer = 0;
+        }
+        for (var x = 0; x < this.pieces[this.currentPlayer].length; x++) {
+            this.pieces[this.currentPlayer][x].AddListener();
         }
         this.hasPopped = false;
         this.popperText.innerText = "Player " + (this.currentPlayer + 1) + "'s turn. Press the popper!";
@@ -226,7 +299,6 @@ console.log(playerInput);
 let gameBoard = null;
 function CreateGame() {
     gameBoard = new Board(playerInput.value);
-    console.log(gameBoard);
     playerInput.remove();
     document.getElementById("PlayerCountButton").remove();
 }
